@@ -1,6 +1,13 @@
 [package]
 name = "limon-core"
 version = "0.1.0"
+authors = ["Andrey Doroschenko <andrey.daraschenka@gmail.com>"]
 edition = "2024"
+description = "limon core library"
+readme = "README.md"
+repository = "https://github.com/limon-sh/limon-core"
+license = "MIT"
+keywords = ["limon", "observability", "monitoring"]
+exclude = [".github/"]
 
 [dependencies]
