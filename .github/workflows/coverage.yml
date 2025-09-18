@@ -1,0 +1,26 @@
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Tests
+        run: cargo test
+
+      - name: Upload coverage
+        run: cargo tarpaulin --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
