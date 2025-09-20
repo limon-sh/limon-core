@@ -1,11 +1,12 @@
 //! A module for managing scheduled items that are periodically polled.
 //!
-//! The `schedule` module provides structures and traits to manage objects
-//! that need to be executed, updated, or checked at regular intervals.
-//! Each item must implement the `Schedulable` trait, which defines a unique
-//! identifier and an associated interval.
+//! The [`schedule`](crate::schedule) module provides structures and
+//! traits to manage objects that need to be executed, updated, or
+//! checked at regular intervals. Each item must implement the
+//! [`Schedulable`] trait, which defines a unique identifier and
+//! an associated interval.
 //!
-//! The `Schedule` struct maintains:
+//! The [`Schedule`] struct maintains:
 //! - A mapping of item `id` to the items themselves for fast lookup.
 //! - A mapping of `interval` to sets of item `id`, allowing efficient
 //!   retrieval of all items that should be polled at a given interval.
@@ -44,7 +45,7 @@ use std::hash::Hash;
 /// A trait for items that can be scheduled.
 ///
 /// This trait defines the necessary requirements for an item to be
-/// stored and managed by a [Schedule]. Each item must have a unique
+/// stored and managed by a [`Schedule`]. Each item must have a unique
 /// identifier `id` and an associated `interval`. Both types must
 /// support hashing and equality checks, and be convertible to `i64`.
 pub trait Schedulable {
@@ -61,9 +62,9 @@ pub trait Schedulable {
   fn get_interval(&self) -> Self::Interval;
 }
 
-/// A schedule for managing [Schedulable] items.
+/// A schedule for managing [`Schedulable`] items.
 ///
-/// The [Schedule] structure stores items indexed by their unique
+/// The [`Schedule`] structure stores items indexed by their unique
 /// identifiers and groups item `id` by their `interval`. This allows
 /// efficient lookup of items by `id` and retrieval of all `id` in a
 /// given interval.
@@ -104,7 +105,7 @@ impl<Item: Schedulable> Schedule<Item> {
   ///
   /// An element is included in the interval if there is at least
   /// one value between `from` and `to` that is divisible by
-  /// the item's [interval](Schedulable::Interval) without a remainder.
+  /// the item's [`Interval`](Schedulable::Interval) without a remainder.
   pub fn get_due(&self, from: i64, to: i64) -> Vec<&Item> {
     let mut result = Vec::new();
 
