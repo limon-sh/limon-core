@@ -1,5 +1,6 @@
 tab_spaces = 2
 hard_tabs = false
 
-indent_style = "Block"
 reorder_imports = true
+indent_style = "Block"
+group_imports = "StdExternalCrate"
