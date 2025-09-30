@@ -1,6 +1,7 @@
 use crate::schedule::Schedulable;
 
 /// Represents a monitor for a host, which can be measured.
+#[derive(Debug)]
 pub struct Monitor {
   /// Monitor identifier.
   pub id: i64,
@@ -13,6 +14,7 @@ pub struct Monitor {
 }
 
 /// Configuration type for a monitor.
+#[derive(Debug)]
 pub enum Config {
   /// Ping monitor configuration.
   Ping(PingConfig),
@@ -22,7 +24,7 @@ pub enum Config {
 }
 
 /// Configuration for a Ping monitor.
-#[derive(Default)]
+#[derive(Debug, Default, serde::Deserialize)]
 pub struct PingConfig {
   /// How often the monitor should perform a check, in seconds.
   pub check_frequency: i64,
@@ -38,7 +40,7 @@ pub struct PingConfig {
 }
 
 /// Configuration for an `HTTP` monitor.
-#[derive(Default)]
+#[derive(Debug, Default, serde::Deserialize)]
 pub struct HttpConfig {
   /// How often the monitor should perform a check, in seconds.
   pub check_frequency: i64,
@@ -84,6 +86,7 @@ pub struct HttpConfig {
 }
 
 /// Represents a single `HTTP` header (name-value pair).
+#[derive(Debug, serde::Deserialize)]
 pub struct Header {
   /// The name of the `HTTP` header (e.g., `"Content-Type"`).
   pub name: String,
