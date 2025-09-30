@@ -1,12 +1,11 @@
 //! A module for managing scheduled items that are periodically polled.
 //!
-//! The [`schedule`](crate::schedule) module provides structures and
-//! traits to manage objects that need to be executed, updated, or
-//! checked at regular intervals. Each item must implement the
-//! [`Schedulable`] trait, which defines a unique identifier and
-//! an associated interval.
+//! The `schedule` module provides structures and traits to manage objects
+//! that need to be executed, updated, or checked at regular intervals.
+//! Each item must implement the `Schedulable` trait, which defines a unique
+//! identifier and an associated interval.
 //!
-//! The [`Schedule`] struct maintains:
+//! The `Schedule` struct maintains:
 //! - A mapping of item `id` to the items themselves for fast lookup.
 //! - A mapping of `interval` to sets of item `id`, allowing efficient
 //!   retrieval of all items that should be polled at a given interval.
@@ -31,21 +30,26 @@
 //!     fn get_interval(&self) -> Self::Interval { self.interval }
 //! }
 //!
-//! let mut schedule: Schedule<Task> = Schedule::new();
+//! let schedule: Schedule<Task> = Schedule::new();
 //!
-//! schedule.insert(Task { id: 1, interval: 30 });
-//! schedule.insert(Task { id: 2, interval: 60 });
+//! # tokio_test::block_on(async {
+//! schedule.insert(Task { id: 1, interval: 30 }).await;
+//! schedule.insert(Task { id: 2, interval: 60 }).await;
 //!
-//! assert_eq!(schedule.get_due(0, 90).len(), 2);
+//! assert_eq!(schedule.get_due(0, 90).await.len(), 2);
+//! # })
 //! ```
 
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
 
 /// A trait for items that can be scheduled.
 ///
 /// This trait defines the necessary requirements for an item to be
-/// stored and managed by a [`Schedule`]. Each item must have a unique
+/// stored and managed by a [Schedule]. Each item must have a unique
 /// identifier `id` and an associated `interval`. Both types must
 /// support hashing and equality checks, and be convertible to `i64`.
 pub trait Schedulable {
@@ -62,9 +66,9 @@ pub trait Schedulable {
   fn get_interval(&self) -> Self::Interval;
 }
 
-/// A schedule for managing [`Schedulable`] items.
+/// A schedule for managing [Schedulable] items.
 ///
-/// The [`Schedule`] structure stores items indexed by their unique
+/// The [Schedule] structure stores items indexed by their unique
 /// identifiers and groups item `id` by their `interval`. This allows
 /// efficient lookup of items by `id` and retrieval of all `id` in a
 /// given interval.
@@ -78,45 +82,45 @@ pub trait Schedulable {
 ///
 /// **m** - it's amount of unique intervals.
 pub struct Schedule<Item: Schedulable> {
-  items: HashMap<Item::Id, Item>,
-  intervals: HashMap<Item::Interval, HashSet<Item::Id>>,
+  items: RwLock<HashMap<Item::Id, Arc<Item>>>,
+  intervals: RwLock<HashMap<Item::Interval, HashSet<Item::Id>>>,
 }
 
 impl<Item: Schedulable> Schedule<Item> {
   /// Create a new schedule.
   pub fn new() -> Self {
     Self {
-      items: HashMap::new(),
-      intervals: HashMap::new(),
+      items: RwLock::new(HashMap::new()),
+      intervals: RwLock::new(HashMap::new()),
     }
   }
 
   /// Get an item by `id`.
-  pub fn get(&self, id: Item::Id) -> Option<&Item> {
-    self.items.get(&id)
-  }
-
-  /// Get mut ref on an item by `id`.
-  pub fn get_mut(&mut self, id: Item::Id) -> Option<&mut Item> {
-    self.items.get_mut(&id)
+  pub async fn get(&self, id: Item::Id) -> Option<Arc<Item>> {
+    self.items.read().await.get(&id).cloned()
   }
 
   /// Get items that are included in the interval `from` and `to`.
   ///
   /// An element is included in the interval if there is at least
   /// one value between `from` and `to` that is divisible by
-  /// the item's [`Interval`](Schedulable::Interval) without a remainder.
-  pub fn get_due(&self, from: i64, to: i64) -> Vec<&Item> {
+  /// the item's [interval](Schedulable::Interval) without a remainder.
+  ///
+  /// `from` and `to` should be > 0 and `from` should be <= `to`.
+  pub async fn get_due(&self, from: i64, to: i64) -> Vec<Arc<Item>> {
     let mut result = Vec::new();
+    let intervals = self.intervals.read().await;
 
-    for (interval, ids) in &self.intervals {
+    for (interval, ids) in intervals.iter() {
       let interval = (*interval).into();
-      let next_check = ((from / interval) + 1) * interval;
+      let next_check = ((from + interval - 1) / interval) * interval;
 
       if next_check <= to {
+        let guard = self.items.read().await;
+
         for id in ids {
-          if let Some(item) = self.items.get(id) {
-            result.push(item);
+          if let Some(item) = guard.get(id) {
+            result.push(item.clone());
           }
         }
       }
@@ -128,30 +132,39 @@ impl<Item: Schedulable> Schedule<Item> {
   /// Insert an item into schedule.
   ///
   /// If an item with this `id` is already in the schedule, it will be replaced.
-  pub fn insert(&mut self, item: Item) {
+  pub async fn insert(&self, item: Item) {
     let id = item.get_id();
     let interval = item.get_interval();
 
-    if let Some(ids_set) = self.intervals.get_mut(&interval) {
-      ids_set.insert(id);
-    } else {
-      let mut set = HashSet::new();
-      set.insert(id);
+    {
+      let mut intervals = self.intervals.write().await;
 
-      self.intervals.insert(interval, set);
+      if let Some(ids_set) = intervals.get_mut(&interval) {
+        ids_set.insert(id);
+      } else {
+        let mut set = HashSet::new();
+        set.insert(id);
+
+        intervals.insert(interval, set);
+      }
     }
 
-    self.items.insert(id, item);
+    {
+      let mut items = self.items.write().await;
+
+      items.insert(id, Arc::new(item));
+    }
   }
 
   /// Remove an item by `id` from the schedule if it exists.
-  pub fn remove(&mut self, id: Item::Id) {
-    if let Some(item) = self.items.remove(&id) {
+  pub async fn remove(&mut self, id: Item::Id) {
+    if let Some(item) = self.items.write().await.remove(&id) {
       let interval = item.get_interval();
+      let mut intervals = self.intervals.write().await;
 
-      if let Some(set) = self.intervals.get_mut(&interval) {
+      if let Some(set) = intervals.get_mut(&interval) {
         if set.remove(&id) && set.is_empty() {
-          self.intervals.remove(&interval);
+          intervals.remove(&interval);
         }
       }
     }
@@ -160,6 +173,8 @@ impl<Item: Schedulable> Schedule<Item> {
 
 #[cfg(test)]
 mod tests {
+  use tokio::sync::RwLockReadGuard;
+
   use super::*;
 
   #[derive(Debug, PartialEq)]
@@ -170,14 +185,14 @@ mod tests {
   }
 
   impl<Item: Schedulable> Schedule<Item> {
-    #[doc(hidden)]
-    pub fn items_ref(&self) -> &HashMap<Item::Id, Item> {
-      &self.items
+    pub async fn items_ref(&self) -> RwLockReadGuard<'_, HashMap<Item::Id, Arc<Item>>> {
+      self.items.read().await
     }
 
-    #[doc(hidden)]
-    pub fn intervals_ref(&self) -> &HashMap<Item::Interval, HashSet<Item::Id>> {
-      &self.intervals
+    pub async fn intervals_ref(
+      &self,
+    ) -> RwLockReadGuard<'_, HashMap<Item::Interval, HashSet<Item::Id>>> {
+      self.intervals.read().await
     }
   }
 
@@ -204,63 +219,68 @@ mod tests {
     }
   }
 
-  #[test]
-  fn empty_schedule() {
+  #[tokio::test]
+  async fn empty_schedule() {
     let schedule: Schedule<Task> = Schedule::new();
 
     assert!(
-      schedule.items_ref().is_empty(),
+      schedule.items_ref().await.is_empty(),
       "schedule items shouldn't be empty"
     );
     assert!(
-      schedule.intervals_ref().is_empty(),
+      schedule.intervals_ref().await.is_empty(),
       "schedule intervals shouldn't be empty"
     );
   }
 
-  #[test]
-  fn test_empty_schedule() {
+  #[tokio::test]
+  async fn test_empty_schedule() {
     let schedule: Schedule<Task> = Schedule::new();
 
     assert!(
-      schedule.get_due(0, 100).is_empty(),
+      schedule.get_due(1, 100).await.is_empty(),
       "empty schedule shouldn't return due items"
     );
   }
 
-  #[test]
-  fn get_due_on_boundary() {
-    let mut schedule: Schedule<Task> = Schedule::new();
+  #[tokio::test]
+  async fn get_due_on_boundary() {
+    let schedule: Schedule<Task> = Schedule::new();
 
-    schedule.insert(Task::from((1, 10)));
+    schedule.insert(Task::from((1, 10))).await;
 
     assert_eq!(
-      schedule.get_due(0, 10).len(),
+      schedule.get_due(1, 10).await.len(),
       1,
       "schedule should return item on boundary"
     );
+    assert_eq!(
+      schedule.get_due(10, 10).await.len(),
+      1,
+      "schedule should return item on boundary equals"
+    );
   }
 
-  #[test]
-  fn get_due_before_boundary() {
-    let mut schedule: Schedule<Task> = Schedule::new();
+  #[tokio::test]
+  async fn get_due_before_boundary() {
+    let schedule: Schedule<Task> = Schedule::new();
 
-    schedule.insert(Task::from((1, 10)));
+    schedule.insert(Task::from((1, 10))).await;
 
     assert!(
-      schedule.get_due(0, 9).is_empty(),
+      schedule.get_due(1, 9).await.is_empty(),
       "schedule shouldn't return due items before boundary"
     );
   }
 
-  #[test]
-  fn test_multiple_intervals() {
-    let mut schedule: Schedule<Task> = Schedule::new();
+  #[tokio::test]
+  async fn test_multiple_intervals() {
+    let schedule: Schedule<Task> = Schedule::new();
 
-    schedule.insert(Task::from((1, 5)));
-    schedule.insert(Task::from((2, 10)));
+    schedule.insert(Task::from((1, 5))).await;
+    schedule.insert(Task::from((2, 10))).await;
 
-    let ids: Vec<i64> = schedule.get_due(0, 10).iter().map(|t| t.id).collect();
+    let ids: Vec<i64> = schedule.get_due(1, 10).await.iter().map(|t| t.id).collect();
 
     assert!(
       ids.contains(&1),
@@ -272,118 +292,103 @@ mod tests {
     );
   }
 
-  #[test]
-  fn test_skip_multiple_intervals() {
-    let mut schedule: Schedule<Task> = Schedule::new();
+  #[tokio::test]
+  async fn test_skip_multiple_intervals() {
+    let schedule: Schedule<Task> = Schedule::new();
 
-    schedule.insert(Task::from((1, 10)));
+    schedule.insert(Task::from((1, 10))).await;
 
     assert_eq!(
-      schedule.get_due(0, 35).len(),
+      schedule.get_due(1, 35).await.len(),
       1,
       "schedule should return due item even if multiple intervals were passed"
     );
   }
 
-  #[test]
-  fn insert_single_item_into_schedule() {
-    let mut schedule: Schedule<Task> = Schedule::new();
+  #[tokio::test]
+  async fn insert_single_item_into_schedule() {
+    let schedule: Schedule<Task> = Schedule::new();
 
-    schedule.insert(Task::from((1, 30)));
+    schedule.insert(Task::from((1, 30))).await;
 
     assert!(
-      schedule.items_ref().contains_key(&1),
+      schedule.items_ref().await.contains_key(&1),
       "schedule items should contain entry"
     );
     assert!(
-      schedule.intervals_ref().contains_key(&30),
+      schedule.intervals_ref().await.contains_key(&30),
       "schedule intervals should contain entry"
     );
     assert_eq!(
-      schedule.get(1),
-      Some(&Task::from((1, 30))),
+      schedule.get(1).await,
+      Some(Arc::new(Task::from((1, 30)))),
       "schedule should return entry by id"
     );
   }
 
-  #[test]
-  fn insert_multiple_items_into_schedule() {
-    let mut schedule: Schedule<Task> = Schedule::new();
+  #[tokio::test]
+  async fn insert_multiple_items_into_schedule() {
+    let schedule: Schedule<Task> = Schedule::new();
 
-    schedule.insert(Task::from((1, 30)));
-    schedule.insert(Task::from((2, 30)));
+    schedule.insert(Task::from((1, 30))).await;
+    schedule.insert(Task::from((2, 30))).await;
 
     assert!(
-      schedule.items_ref().contains_key(&1),
+      schedule.items_ref().await.contains_key(&1),
       "schedule items should contain entry"
     );
     assert!(
-      schedule.items_ref().contains_key(&2),
+      schedule.items_ref().await.contains_key(&2),
       "schedule items should contain entry"
     );
     assert!(
-      schedule.intervals_ref().contains_key(&30),
+      schedule.intervals_ref().await.contains_key(&30),
       "schedule intervals should contain entry"
     );
     assert_eq!(
-      schedule.get(1),
-      Some(&Task::from((1, 30))),
+      schedule.get(1).await,
+      Some(Arc::new(Task::from((1, 30)))),
       "schedule should return entry by id"
     );
     assert_eq!(
-      schedule.get(2),
-      Some(&Task::from((2, 30))),
+      schedule.get(2).await,
+      Some(Arc::new(Task::from((2, 30)))),
       "schedule should return entry by id"
     );
   }
 
-  #[test]
-  fn insert_the_sane_item_twice() {
-    let mut schedule: Schedule<Task> = Schedule::new();
+  #[tokio::test]
+  async fn insert_the_sane_item_twice() {
+    let schedule: Schedule<Task> = Schedule::new();
 
-    schedule.insert(Task::from((1, 30)));
-    schedule.insert(Task::from((1, 30)));
+    schedule.insert(Task::from((1, 30))).await;
+    schedule.insert(Task::from((1, 30))).await;
 
     assert_eq!(
-      schedule.items_ref().len(),
+      schedule.items_ref().await.len(),
       1,
       "schedule items shouldn't be empty"
     );
     assert_eq!(
-      schedule.intervals_ref().len(),
+      schedule.intervals_ref().await.len(),
       1,
       "schedule intervals shouldn't be empty"
     );
   }
 
-  #[test]
-  fn update_item_from_schedule() {
+  #[tokio::test]
+  async fn remove_item_from_schedule() {
     let mut schedule: Schedule<Task> = Schedule::new();
 
-    schedule.insert(Task::from((1, 30)));
-    if let Some(item) = schedule.get_mut(1) {
-      item.updated = true;
-    }
+    schedule.insert(Task::from((1, 30))).await;
+    schedule.remove(1).await;
 
     assert!(
-      schedule.get(1).unwrap().updated,
-      "schedule should return mutable reference to the item"
-    );
-  }
-
-  #[test]
-  fn remove_item_from_schedule() {
-    let mut schedule: Schedule<Task> = Schedule::new();
-
-    schedule.insert(Task::from((1, 30)));
-    schedule.remove(1);
-
-    assert!(
-      schedule.items_ref().is_empty(),
+      schedule.items_ref().await.is_empty(),
       "schedule items should be empty"
     );
     assert!(
-      schedule.intervals_ref().is_empty(),
+      schedule.intervals_ref().await.is_empty(),
       "schedule intervals should be empty"
     );
   }
