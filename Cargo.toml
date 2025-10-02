@@ -1,6 +1,6 @@
 [package]
 name = "limon-core"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Andrey Doroschenko <andrey.daraschenka@gmail.com>"]
 edition = "2024"
 description = "limon core library"
