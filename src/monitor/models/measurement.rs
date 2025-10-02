@@ -1,3 +1,5 @@
+use time::OffsetDateTime;
+
 use crate::monitor::errors::CollectorError;
 
 /// Represents a single measurement performed by a monitor.
@@ -7,7 +9,7 @@ use crate::monitor::errors::CollectorError;
 #[derive(Debug)]
 pub struct Measurement {
   /// Unix timestamp when the measurement was taken.
-  pub timestamp: i64,
+  pub timestamp: OffsetDateTime,
 
   /// Unique identifier of the monitor that produced this measurement.
   pub monitor_id: i64,

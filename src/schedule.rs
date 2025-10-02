@@ -162,7 +162,7 @@ impl<Item: Schedulable> Schedule<Item> {
   }
 
   /// Remove an item by `id` from the schedule if it exists.
-  pub async fn remove(&mut self, id: Item::Id) {
+  pub async fn remove(&self, id: Item::Id) {
     if let Some(item) = self.items.write().await.remove(&id) {
       let interval = item.get_interval();
       let mut intervals = self.intervals.write().await;
@@ -177,7 +177,7 @@ impl<Item: Schedulable> Schedule<Item> {
 
   /// Clears the schedule, removing all items. Keeps the allocated
   /// memory for reuse.
-  pub async fn clear(&mut self) {
+  pub async fn clear(&self) {
     self.items.write().await.clear();
     self.intervals.write().await.clear();
   }
@@ -390,7 +390,7 @@ mod tests {
 
   #[tokio::test]
   async fn remove_item_from_schedule() {
-    let mut schedule: Schedule<Task> = Schedule::new();
+    let schedule: Schedule<Task> = Schedule::new();
 
     schedule.insert(Task::from((1, 30))).await;
     schedule.remove(1).await;
@@ -407,7 +407,7 @@ mod tests {
 
   #[tokio::test]
   async fn clear() {
-    let mut schedule: Schedule<Task> = Schedule::new();
+    let schedule: Schedule<Task> = Schedule::new();
 
     schedule.insert(Task::from((1, 10))).await;
     schedule.insert(Task::from((2, 20))).await;

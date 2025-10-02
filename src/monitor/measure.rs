@@ -33,7 +33,7 @@ impl Monitor {
   ///   that occurred during the measurement.
   pub async fn measure(&self) -> Measurement {
     let mut measure = Measurement {
-      timestamp: OffsetDateTime::now_utc().unix_timestamp(),
+      timestamp: OffsetDateTime::now_utc(),
       monitor_id: self.id,
       data: None,
       error: None,
