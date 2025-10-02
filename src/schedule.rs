@@ -95,6 +95,11 @@ impl<Item: Schedulable> Schedule<Item> {
     }
   }
 
+  /// Returns `true` if the [Schedule] doesn't contain elements.
+  pub async fn is_empty(&self) -> bool {
+    self.items.read().await.is_empty() && self.intervals.read().await.is_empty()
+  }
+
   /// Get an item by `id`.
   pub async fn get(&self, id: Item::Id) -> Option<Arc<Item>> {
     self.items.read().await.get(&id).cloned()
@@ -168,6 +173,13 @@ impl<Item: Schedulable> Schedule<Item> {
         }
       }
     }
+  }
+
+  /// Clears the schedule, removing all items. Keeps the allocated
+  /// memory for reuse.
+  pub async fn clear(&mut self) {
+    self.items.write().await.clear();
+    self.intervals.write().await.clear();
   }
 }
 
@@ -391,5 +403,18 @@ mod tests {
       schedule.intervals_ref().await.is_empty(),
       "schedule intervals should be empty"
     );
+  }
+
+  #[tokio::test]
+  async fn clear() {
+    let mut schedule: Schedule<Task> = Schedule::new();
+
+    schedule.insert(Task::from((1, 10))).await;
+    schedule.insert(Task::from((2, 20))).await;
+
+    assert!(!schedule.is_empty().await, "schedule shouldn't be empty");
+
+    schedule.clear().await;
+    assert!(schedule.is_empty().await, "schedule should be empty");
   }
 }
