@@ -13,5 +13,7 @@
 //!   [`Schedulable`](schedule::Schedulable) have a unique `id` and an associated
 //!   interval, allowing efficient lookup and grouping.
 
+extern crate openssl;
+
 pub mod monitor;
 pub mod schedule;
