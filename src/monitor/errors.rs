@@ -24,12 +24,12 @@ pub enum PingError {
   Dns(#[from] trust_dns_resolver::error::ResolveError),
 
   /// The host did not respond within the timeout.
-  #[error("No reply from {addr:?} timeout")]
-  NoReply { addr: String },
+  #[error("Ping timed out after {timeout:?} seconds")]
+  Timeout { timeout: i64 },
 
-  /// The target host is unreachable.
-  #[error("The target host is unreachable")]
-  Unreachable,
+  /// The host did not respond.
+  #[error("Ping error: {0}")]
+  Error(#[from] surge_ping::SurgeError),
 }
 
 /// Errors that can occur during an HTTP measurement.
