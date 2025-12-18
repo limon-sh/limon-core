@@ -1,6 +1,6 @@
 [package]
 name = "limon-core"
-version = "0.2.5"
+version = "0.2.6"
 authors = ["Andrey Doroschenko <andrey.daraschenka@gmail.com>"]
 edition = "2024"
 description = "limon core library"
@@ -13,7 +13,7 @@ exclude = [".github/"]
 [dependencies]
 time = "0.3.43"
 thiserror = "2.0.16"
-fastping-rs = "0.2.4"
+surge-ping = "0.8.3"
 once_cell = "1.21.3"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.47.1", default-features = false, features = [ "macros", "rt-multi-thread", "sync" ] }
