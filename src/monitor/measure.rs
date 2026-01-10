@@ -104,10 +104,10 @@ mod tests {
         method: String::from("GET"),
         protocol: String::from("HTTP"),
         path: Some(String::from("/check")),
-        header: Some(Header {
+        headers: Some(vec![Header {
           name: String::from("Authorization"),
           value: String::from("token"),
-        }),
+        }]),
         expected_status_code: 200,
         keyword: Some(String::from("index")),
         ..Default::default()

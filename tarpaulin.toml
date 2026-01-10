@@ -1,0 +1,3 @@
+[test_config]
+# Excluded from coverage since ping requires raw sockets and elevated privileges.
+exclude-files = ["src/monitor/collectors/ping.rs"]

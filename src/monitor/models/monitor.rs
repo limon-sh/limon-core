@@ -82,7 +82,7 @@ pub struct HttpConfig {
   pub keep_cookies_on_redirects: bool,
 
   /// Optional `HTTP` headers to include in the request.
-  pub header: Option<Header>,
+  pub headers: Option<Vec<Header>>,
 }
 
 /// Represents a single `HTTP` header (name-value pair).

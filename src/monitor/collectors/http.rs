@@ -38,8 +38,11 @@ impl Http {
     );
 
     let mut headers = List::new();
-    if let Some(header) = &config.header {
-      headers.append(&format!("{}: {}", header.name, header.value))?;
+
+    if let Some(header_values) = &config.headers {
+      for header in header_values {
+        headers.append(&format!("{}: {}", header.name, header.value))?;
+      }
     }
 
     let mut request = Easy2::new(ResponseBody::default());
@@ -136,19 +139,22 @@ mod tests {
       })
       .await;
 
-    let result = Http::measure(&server.host(), &HttpConfig {
-      timeout: 3,
-      method: String::from("GET"),
-      protocol: String::from("HTTP"),
-      port: Some(server.port()),
-      path: Some(String::from("/check")),
-      header: Some(Header {
-        name: String::from("Authorization"),
-        value: String::from("token"),
-      }),
-      expected_status_code: 200,
-      ..Default::default()
-    })
+    let result = Http::measure(
+      &server.host(),
+      &HttpConfig {
+        timeout: 3,
+        method: String::from("GET"),
+        protocol: String::from("HTTP"),
+        port: Some(server.port()),
+        path: Some(String::from("/check")),
+        headers: Some(vec![Header {
+          name: String::from("Authorization"),
+          value: String::from("token"),
+        }]),
+        expected_status_code: 200,
+        ..Default::default()
+      },
+    )
     .await;
 
     mock.assert();
@@ -167,16 +173,19 @@ mod tests {
       })
       .await;
 
-    let result = Http::measure(&server.host(), &HttpConfig {
-      timeout: 3,
-      method: String::from("POST"),
-      protocol: String::from("HTTP"),
-      port: Some(server.port()),
-      path: Some(String::from("/check")),
-      body: Some(String::from("test")),
-      expected_status_code: 200,
-      ..Default::default()
-    })
+    let result = Http::measure(
+      &server.host(),
+      &HttpConfig {
+        timeout: 3,
+        method: String::from("POST"),
+        protocol: String::from("HTTP"),
+        port: Some(server.port()),
+        path: Some(String::from("/check")),
+        body: Some(String::from("test")),
+        expected_status_code: 200,
+        ..Default::default()
+      },
+    )
     .await;
 
     mock.assert();
@@ -196,15 +205,18 @@ mod tests {
         })
         .await;
 
-      let result = Http::measure(&server.host(), &HttpConfig {
-        timeout: 3,
-        method: String::from(method),
-        protocol: String::from("HTTP"),
-        port: Some(server.port()),
-        path: Some(String::from("/check")),
-        expected_status_code: 200,
-        ..Default::default()
-      })
+      let result = Http::measure(
+        &server.host(),
+        &HttpConfig {
+          timeout: 3,
+          method: String::from(method),
+          protocol: String::from("HTTP"),
+          port: Some(server.port()),
+          path: Some(String::from("/check")),
+          expected_status_code: 200,
+          ..Default::default()
+        },
+      )
       .await;
 
       mock.assert();
@@ -224,15 +236,18 @@ mod tests {
       })
       .await;
 
-    let result = Http::measure(&server.host(), &HttpConfig {
-      timeout: 3,
-      method: String::from("GET"),
-      protocol: String::from("HTTP"),
-      port: Some(server.port()),
-      path: Some(String::from("/check")),
-      expected_status_code: 200,
-      ..Default::default()
-    })
+    let result = Http::measure(
+      &server.host(),
+      &HttpConfig {
+        timeout: 3,
+        method: String::from("GET"),
+        protocol: String::from("HTTP"),
+        port: Some(server.port()),
+        path: Some(String::from("/check")),
+        expected_status_code: 200,
+        ..Default::default()
+      },
+    )
     .await;
 
     mock.assert();
@@ -251,16 +266,19 @@ mod tests {
       })
       .await;
 
-    let result = Http::measure(&server.host(), &HttpConfig {
-      timeout: 3,
-      method: String::from("GET"),
-      protocol: String::from("HTTP"),
-      port: Some(server.port()),
-      path: Some(String::from("/check")),
-      expected_status_code: 200,
-      keyword: Some(String::from("index")),
-      ..Default::default()
-    })
+    let result = Http::measure(
+      &server.host(),
+      &HttpConfig {
+        timeout: 3,
+        method: String::from("GET"),
+        protocol: String::from("HTTP"),
+        port: Some(server.port()),
+        path: Some(String::from("/check")),
+        expected_status_code: 200,
+        keyword: Some(String::from("index")),
+        ..Default::default()
+      },
+    )
     .await;
 
     mock.assert();
@@ -270,13 +288,16 @@ mod tests {
 
   #[tokio::test]
   async fn unknown_error() {
-    let result = Http::measure(&String::from("127.0.0.1"), &HttpConfig {
-      method: String::from("GET"),
-      protocol: String::from("HTTP"),
-      port: Some(5555),
-      expected_status_code: 200,
-      ..Default::default()
-    })
+    let result = Http::measure(
+      &String::from("127.0.0.1"),
+      &HttpConfig {
+        method: String::from("GET"),
+        protocol: String::from("HTTP"),
+        port: Some(5555),
+        expected_status_code: 200,
+        ..Default::default()
+      },
+    )
     .await;
 
     assert!(result.is_err(), "Could not connect to server");
