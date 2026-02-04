@@ -4,21 +4,21 @@ use std::time::Duration;
 
 use once_cell::sync::Lazy;
 use trust_dns_resolver::TokioAsyncResolver;
-use trust_dns_resolver::config::ResolverOpts;
 use trust_dns_resolver::error::ResolveError;
 
-use crate::measure;
+#[doc(hidden)]
+#[macro_export]
+macro_rules! measure {
+  ($block:block) => {{
+    let start = std::time::Instant::now();
+    let result = { $block };
 
-static _RESOLVER: Lazy<Arc<TokioAsyncResolver>> = Lazy::new(|| {
-  let mut opts = ResolverOpts::default();
-  opts.cache_size = 0;
-  opts.positive_min_ttl = Some(Duration::ZERO);
-  opts.positive_max_ttl = Some(Duration::ZERO);
-  opts.negative_min_ttl = Some(Duration::ZERO);
-  opts.negative_max_ttl = Some(Duration::ZERO);
+    (result, start.elapsed())
+  }};
+}
 
-  Arc::new(TokioAsyncResolver::tokio_from_system_conf().expect("system resolver"))
-});
+static _RESOLVER: Lazy<Arc<TokioAsyncResolver>> =
+  Lazy::new(|| Arc::new(TokioAsyncResolver::tokio_from_system_conf().expect("system resolver")));
 
 pub struct Dns;
 

@@ -1,4 +1,4 @@
-//! A module for managing scheduled items that are periodically polled.
+//! A module for managing scheduled items that can be periodically polled.
 //!
 //! The `schedule` module provides structures and traits to manage objects
 //! that need to be executed, updated, or checked at regular intervals.

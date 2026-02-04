@@ -1,6 +1,6 @@
 use time::OffsetDateTime;
 
-use crate::monitor::errors::CollectorError;
+use crate::collectors::monitor::errors::CollectorError;
 
 /// Represents a single measurement performed by a monitor.
 ///
@@ -8,11 +8,11 @@ use crate::monitor::errors::CollectorError;
 /// and either the collected data or an error if the measurement failed.
 #[derive(Debug)]
 pub struct Measurement {
-  /// Unix timestamp when the measurement was taken.
-  pub timestamp: OffsetDateTime,
-
   /// Unique identifier of the monitor that produced this measurement.
   pub monitor_id: i64,
+
+  /// Unix timestamp when the measurement was taken.
+  pub timestamp: OffsetDateTime,
 
   /// Measurement data, if the operation was successful.
   pub data: Option<Data>,
@@ -34,32 +34,35 @@ pub enum Data {
 /// Data returned by a ping monitor.
 ///
 /// Contains timing information for DNS lookup and ICMP ping.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(test, derive(Default))]
 pub struct PingData {
   /// Time in milliseconds spent on DNS resolution.
-  pub dns_lookup: f32,
+  pub dns: f32,
 
   /// Time in milliseconds spent performing the ping.
-  pub ping: f32,
+  pub rtt: f32,
 }
 
 /// Data returned by an HTTP monitor.
 ///
 /// Contains timing information for DNS resolution, TCP connection, TLS handshake,
 /// and data transfer.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(test, derive(Default))]
 pub struct HttpData {
   /// Time in milliseconds spent on DNS resolution.
-  pub dns_lookup: f32,
+  pub dns: f32,
 
   /// Time in milliseconds spent establishing the TCP connection.
-  pub connect: f32,
+  pub tcp: f32,
 
   /// Time in milliseconds spent performing the TLS handshake
-  pub tls_handshake: f32,
+  pub tls: f32,
+
+  /// Time to first byte in milliseconds
+  pub ttfb: f32,
 
   /// Time in milliseconds spent transferring the HTTP response body.
-  pub data_transfer: f32,
+  pub transfer: f32,
 }

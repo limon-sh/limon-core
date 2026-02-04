@@ -1,6 +1,6 @@
 [package]
 name = "limon-core"
-version = "0.2.7"
+version = "0.3.0"
 authors = ["Andrey Doroschenko <andrey.daraschenka@gmail.com>"]
 edition = "2024"
 description = "limon core library"
@@ -15,6 +15,7 @@ time = "0.3.43"
 thiserror = "2.0.16"
 surge-ping = "0.8.3"
 once_cell = "1.21.3"
+sqlx = { version = "0.8.6", default-features = false, features = ["derive"] }
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.47.1", default-features = false, features = [ "macros", "rt-multi-thread", "sync" ] }
 trust-dns-resolver = { version = "0.23.2", features = [ "tokio-runtime" ] }
@@ -22,8 +23,12 @@ curl = { version = "0.4.49", features = [ "http2" ] }
 openssl = { version = "0.10", features = ["vendored"] }
 
 [dev-dependencies]
+rstest = "0.26.1"
 tokio-test = "0.4.4"
 httpmock = "0.8.0-alpha.1"
+serde_json = "1.0.149"
+curl-sys = "0.4.85"
+static_assertions = "1.1.0"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }

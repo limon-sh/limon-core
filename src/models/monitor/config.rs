@@ -1,18 +1,3 @@
-use crate::schedule::Schedulable;
-
-/// Represents a monitor for a host, which can be measured.
-#[derive(Debug)]
-pub struct Monitor {
-  /// Monitor identifier.
-  pub id: i64,
-
-  /// Host without protocol specified.
-  pub host: String,
-
-  /// Monitor's config.
-  pub config: Config,
-}
-
 /// Configuration type for a monitor.
 #[derive(Debug)]
 pub enum Config {
@@ -93,56 +78,4 @@ pub struct Header {
 
   /// The value of the `HTTP` header (e.g., `"application/json"`).
   pub value: String,
-}
-
-/// Trait implementation for scheduling monitors.
-impl Schedulable for Monitor {
-  type Id = i64;
-  type Interval = i64;
-
-  fn get_id(&self) -> Self::Id {
-    self.id
-  }
-
-  fn get_interval(&self) -> Self::Interval {
-    match &self.config {
-      Config::Ping(config) => config.check_frequency,
-      Config::Http(config) => config.check_frequency,
-    }
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn monitor_ping_is_schedulable() {
-    let monitor = Monitor {
-      id: 1,
-      host: String::from("test"),
-      config: Config::Ping(PingConfig {
-        check_frequency: 10,
-        ..Default::default()
-      }),
-    };
-
-    assert_eq!(monitor.get_id(), 1, "monitor id is correct");
-    assert_eq!(monitor.get_interval(), 10, "monitor interval is correct");
-  }
-
-  #[test]
-  fn monitor_http_is_schedulable() {
-    let monitor = Monitor {
-      id: 1,
-      host: String::from("test"),
-      config: Config::Http(HttpConfig {
-        check_frequency: 10,
-        ..Default::default()
-      }),
-    };
-
-    assert_eq!(monitor.get_id(), 1, "monitor id is correct");
-    assert_eq!(monitor.get_interval(), 10, "monitor interval is correct");
-  }
 }

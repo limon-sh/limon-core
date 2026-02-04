@@ -1,18 +1,22 @@
 use time::OffsetDateTime;
 
-use crate::monitor::collectors::{Http, Ping};
-use crate::monitor::errors::CollectorError;
-use crate::monitor::models::{Config, Data, Measurement, Monitor};
+use crate::collectors::monitor::errors::CollectorError;
+use crate::collectors::monitor::{Http, Ping};
+use crate::models::monitor::config::Config;
+use crate::models::monitor::measurement::{Data, Measurement};
+use crate::schedule::Schedulable;
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! measure {
-  ($block:block) => {{
-    let start = std::time::Instant::now();
-    let result = { $block };
+/// Represents a monitor for a host, which can be measured.
+#[derive(Debug)]
+pub struct Monitor {
+  /// Monitor identifier.
+  pub id: i64,
 
-    (result, start.elapsed())
-  }};
+  /// Host without protocol specified.
+  pub host: String,
+
+  /// Monitor's config.
+  pub config: Config,
 }
 
 impl Monitor {
@@ -23,7 +27,7 @@ impl Monitor {
   /// - **`Config::Ping`** – Sends a network ping to the monitor's host using
   ///   the settings in the Ping configuration.
   /// - **`Config::Http`** – Performs an HTTP request to the monitor's host
-  ///   using the parameters in [`HttpConfig`](crate::monitor::models::HttpConfig),
+  ///   using the parameters in [`HttpConfig`](crate::models::monitor::HttpConfig),
   ///   such as method, path, timeout, expected status code, and follow redirects.
   ///
   /// The returned [`Measurement`] includes:
@@ -63,23 +67,44 @@ impl Monitor {
   }
 }
 
+/// Trait implementation for scheduling monitors.
+impl Schedulable for Monitor {
+  type Id = i64;
+  type Interval = i64;
+
+  fn get_id(&self) -> Self::Id {
+    self.id
+  }
+
+  fn get_interval(&self) -> Self::Interval {
+    match &self.config {
+      Config::Ping(config) => config.check_frequency,
+      Config::Http(config) => config.check_frequency,
+    }
+  }
+}
+
 #[cfg(test)]
 mod tests {
-  use std::time::Duration;
-
   use httpmock::Method::GET;
   use httpmock::MockServer;
+  use rstest::rstest;
 
   use super::*;
-  use crate::monitor::models::{Header, HttpConfig};
+  use crate::models::monitor::config::{Header, HttpConfig, PingConfig};
 
-  #[test]
-  fn measure_macro() {
-    let ((), elapsed) = measure!({
-      std::thread::sleep(Duration::from_millis(50));
-    });
+  #[rstest]
+  #[case(Config::Ping(PingConfig { check_frequency: 10, ..Default::default() }))]
+  #[case(Config::Http(HttpConfig { check_frequency: 10, ..Default::default() }))]
+  fn monitor_is_schedulable(#[case] config: Config) {
+    let monitor = Monitor {
+      id: 1,
+      host: String::from("test"),
+      config,
+    };
 
-    assert!(elapsed >= Duration::from_millis(50));
+    assert_eq!(monitor.get_id(), 1, "monitor id is correct");
+    assert_eq!(monitor.get_interval(), 10, "monitor interval is correct");
   }
 
   #[tokio::test]

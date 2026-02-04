@@ -3,8 +3,9 @@ use std::time::Duration;
 use curl::easy::{Easy2, Handler, HttpVersion, List, WriteError};
 use tokio::task;
 
-use crate::monitor::errors::HttpError;
-use crate::monitor::models::{Data, HttpConfig, HttpData};
+use crate::collectors::monitor::errors::HttpError;
+use crate::models::monitor::config::HttpConfig;
+use crate::models::monitor::measurement::{Data, HttpData};
 
 #[derive(Default)]
 struct ResponseBody(Vec<u8>);
@@ -23,6 +24,7 @@ impl ResponseBody {
   }
 }
 
+/// Collector for receiving monitor data from `HTTP` request.
 pub struct Http;
 
 impl Http {
@@ -94,11 +96,19 @@ impl Http {
       }
     }
 
+    let dns = response.namelookup_time()?.as_secs_f32();
+    let tcp = response.connect_time()?.as_secs_f32();
+    let tls = response.appconnect_time()?.as_secs_f32();
+    let ttfb = response.starttransfer_time()?.as_secs_f32();
+    let total = response.total_time()?.as_secs_f32();
+    let transfer = (total - ttfb).max(0.0);
+
     Ok(Data::Http(HttpData {
-      dns_lookup: response.namelookup_time()?.as_secs_f32(),
-      connect: response.connect_time()?.as_secs_f32(),
-      tls_handshake: response.appconnect_time()?.as_secs_f32(),
-      data_transfer: (response.total_time()? - response.starttransfer_time()?).as_secs_f32(),
+      dns,
+      tcp,
+      tls,
+      ttfb,
+      transfer,
     }))
   }
 }
@@ -108,7 +118,7 @@ mod tests {
   use httpmock::prelude::*;
 
   use super::*;
-  use crate::monitor::models::Header;
+  use crate::models::monitor::config::{Header, HttpConfig};
 
   #[test]
   fn response_body() {
