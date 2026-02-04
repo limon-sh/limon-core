@@ -1,6 +1,6 @@
 [package]
 name = "limon-core"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Andrey Doroschenko <andrey.daraschenka@gmail.com>"]
 edition = "2024"
 description = "limon core library"
@@ -20,6 +20,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.47.1", default-features = false, features = [ "macros", "rt-multi-thread", "sync" ] }
 trust-dns-resolver = { version = "0.23.2", features = [ "tokio-runtime" ] }
 curl = { version = "0.4.49", features = [ "http2" ] }
+strum = { version = "0.27.2 ", features = [ "derive" ] }
 openssl = { version = "0.10", features = ["vendored"] }
 
 [dev-dependencies]

@@ -1152,7 +1152,7 @@ dependencies = [
 
 [[package]]
 name = "limon-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "curl",
  "curl-sys",
@@ -1164,6 +1164,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "static_assertions",
+ "strum",
  "surge-ping",
  "thiserror 2.0.16",
  "time",
@@ -1930,6 +1931,27 @@ name = "stringmetrics"
 version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b3c8667cd96245cbb600b8dec5680a7319edd719c5aa2b5d23c6bff94f39765"
+
+[[package]]
+name = "strum"
+version = "0.27.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
+dependencies = [
+ "strum_macros",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.27.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
 
 [[package]]
 name = "surge-ping"
