@@ -1,7 +1,6 @@
 //! A module describing monitor measurement errors.
 
-use crate::models::monitor::metric::{ErrorType, MetricError};
-
+use crate::models::common::{ErrorType, MetricError};
 /// Represents all possible errors that can occur during monitoring.
 ///
 /// Wraps specific errors for Ping and HTTP monitors.
@@ -61,26 +60,26 @@ impl From<&PingError> for MetricError {
   fn from(value: &PingError) -> Self {
     match value {
       PingError::Dns(_) => Self {
-        r#type: ErrorType::DnsError,
+        r#type: Some(ErrorType::DnsError),
         details: None,
       },
 
       PingError::Timeout { timeout: _ } => Self {
-        r#type: ErrorType::Timeout,
+        r#type: Some(ErrorType::Timeout),
         details: None,
       },
 
       PingError::Unknown(error) => match error {
         surge_ping::SurgeError::NetworkError => Self {
-          r#type: ErrorType::NetworkError,
+          r#type: Some(ErrorType::NetworkError),
           details: None,
         },
         surge_ping::SurgeError::Timeout { seq: _ } => Self {
-          r#type: ErrorType::Timeout,
+          r#type: Some(ErrorType::Timeout),
           details: None,
         },
         _ => Self {
-          r#type: ErrorType::Unknown,
+          r#type: Some(ErrorType::Unknown),
           details: Some(error.to_string()),
         },
       },
@@ -95,17 +94,17 @@ impl From<&HttpError> for MetricError {
         expected: _,
         actual: _,
       } => MetricError {
-        r#type: ErrorType::StatusMismatch,
+        r#type: Some(ErrorType::StatusMismatch),
         details: None,
       },
 
       HttpError::KeywordNotFound { keyword: _ } => MetricError {
-        r#type: ErrorType::KeywordNotFound,
+        r#type: Some(ErrorType::KeywordNotFound),
         details: None,
       },
 
       HttpError::Unknown(error) => MetricError {
-        r#type: ErrorType::Unknown,
+        r#type: Some(ErrorType::Unknown),
         details: Some(error.to_string()),
       },
     }
@@ -166,7 +165,7 @@ mod tests {
   ) {
     let metric_error: MetricError = (&error).into();
 
-    assert_eq!(metric_error.r#type, expected_type);
+    assert_eq!(metric_error.r#type, Some(expected_type));
     assert_eq!(metric_error.details.is_some(), expected_details);
   }
 }
