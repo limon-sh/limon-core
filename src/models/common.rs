@@ -17,7 +17,9 @@ pub enum Region {
 }
 
 /// Represents the target of system metric.
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, sqlx::Type)]
+#[derive(
+  Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, sqlx::Type,
+)]
 #[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "target", rename_all = "lowercase")]
 pub enum Target {
@@ -165,6 +167,8 @@ impl Default for MetricError {
 
 #[cfg(test)]
 mod tests {
+  use std::hash::Hash;
+
   use rstest::rstest;
   use serde_json;
   use static_assertions::assert_impl_all;
@@ -174,6 +178,8 @@ mod tests {
   use crate::collectors::monitor::errors::{CollectorError, PingError};
   use crate::models::common::Region;
   use crate::models::monitor::measurement::{HttpData, PingData};
+
+  assert_impl_all!(Target: PartialEq, Eq, Hash);
 
   assert_impl_all!(SystemMetricName: Clone, Copy);
   assert_impl_all!(ErrorType: Clone, Copy);
